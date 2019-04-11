@@ -7,7 +7,7 @@
 void timerhandler(void);
 
 int INTERVAL = 5;
-int STOPAT = 2000;
+int STOPAT = 400;
 unsigned long timepassed = 0;
 int cpuintensive = 0;
 int exec_pause_seq = 0;
@@ -17,20 +17,19 @@ int main(int argc, char *argv[]) {
    struct itimerval it_val;    
    unsigned long i = 0;  
    int opt;
-   
+   srand(getpid());
+     
    while((opt = getopt(argc,argv,"cs:d:e")) != -1)
      {
        switch(opt)
 	 {
 	 case 's':
-	   INTERVAL = atoi(optarg);
-	   STOPAT = 10000 / INTERVAL;
+	   INTERVAL = 5;
 	   break;
 	 case 'c':
 	   cpuintensive = 1;
 	   break;
 	 case 'd':
-	   STOPAT += atoi(optarg) / INTERVAL;
 	   break;
 	 case 'e':
 	   debug = 1;
@@ -65,9 +64,9 @@ int main(int argc, char *argv[]) {
      }
    if(debug)
      {
-       printf("\ntotal-process_time: %d\n",(STOPAT * INTERVAL));
-       printf("sleeping for %dms\n",(1000 * INTERVAL));
-       printf("sleeping for every 10/%d interrupts:\n",INTERVAL);
+       //       printf("\ntotal-process_time: %d\n",(STOPAT * INTERVAL));
+       //printf("sleeping for %dms\n",(1000 * INTERVAL));
+       //printf("sleeping for every 10/%d interrupts:\n",INTERVAL);
           
        if(cpuintensive)
 	 {
@@ -87,11 +86,12 @@ int main(int argc, char *argv[]) {
 void timerhandler(void) {
   timepassed++;
   if(!cpuintensive){
-    exec_pause_seq++;
-    if((exec_pause_seq % (10/INTERVAL)) == 0)
+    int random_number = rand() % 100 + 1;
+    if(random_number >= (10*INTERVAL))
       {
 	usleep(1000 * INTERVAL);
       }
   }
+   
 }
  

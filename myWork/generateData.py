@@ -60,11 +60,11 @@ def launch_processes(num_procs,cpu,results,cpu_change=0):
 #perc_io: percentage of io for processes to use
 def scale_processes(tot_CPU_comp,num_cpu_mix,perc_io):
     ######Calculate scaled environment###############
-    num_cpu_proc_left = tot_CPU_comp - num_cpu_mix; # Number of cpu processes to represent with IO processes
-    num_io_proc = (int)(num_cpu_proc_left / perc_io); # number of IO processes
+    num_cpu_proc_left = tot_CPU_comp - num_cpu_mix # Number of cpu processes to represent with IO processes
+    num_io_proc = (int)(num_cpu_proc_left / (1-perc_io)) # number of IO processes
     cpu_time_diff = (10000 * tot_CPU_comp) - (10000 * num_cpu_mix) - ((10000 * (1 - perc_io)) * num_io_proc)
     io_cpu_correction = cpu_time_diff / num_io_proc #time to add or take away from io processes
-
+    io_cpu_correction = 0
     if(debug):
         print("#########scale Calculated###############")
         print("cpu_processes: " + str(num_cpu_mix))
@@ -76,6 +76,8 @@ def scale_processes(tot_CPU_comp,num_cpu_mix,perc_io):
     def wait(threads):
         for thread in threads:
             thread.join()
+         
+            
     
     #########launch scaled proccesses#############
 
@@ -98,16 +100,56 @@ def scale_processes(tot_CPU_comp,num_cpu_mix,perc_io):
     averages = np.array([mix_cpu_average,io_average,just_cpu_average])
     results = np.concatenate((mix_cpu_result,io_result,just_cpu_result))
 
-    return (averages,results)
+    return (averages,results,num_io_proc)
 
 
-##########run multiple scaled tests####################
-ten_percent_io = scale_processes(4,2,.1)
-twenty_percent_io = scale_processes(4,2,.2)
-thirty_percent_io = scale_processes(4,2,.3)
-fourty_percent_io = scale_processes(4,2,.4)
-fifty_percent_io = scale_processes(4,2,.5)
-sixty_percent_io = scale_processes(4,2,.6)
-seventy_percent_io = scale_processes(4,2,.7)
-eighty_percent_io = scale_processes(4,2,.8)
-ninety_percent_io = scale_processes(4,2,.9)
+def run_scaled_tests(up_to):                                            
+   scaled_results = np.array([None] * up_to)                            
+                                                                        
+   for (i,percentage) in enumerate(np.linspace(.1,(.1*(up_to)),up_to)): 
+      scaled_results[i] = scale_processes(4,2,percentage)               
+   return scaled_results                                                
+                                                                        
+def bar_plot(title,cpu_mix,just_cpu_av,io,n_groups,x_lab,x_ticks,y_lab):
+
+   #set up plot
+   fig, ax = plt.subplots()
+   index = np.arange(n_groups)
+   bar_width = 0.20
+   opacity = 0.8
+
+   io_rect = plt.bar(index,io,bar_width,alpha=opacity,color='b',label='io_average')
+   mix_cpu_rect = plt.bar(index+bar_width,cpu_mix,bar_width,alpha=opacity,color='r',label='mix_cpu_average')
+   just_cpu_rect = plt.bar(index+(2*bar_width),just_cpu_av,bar_width,alpha=opacity,color='g',label='just_cpu_av')
+
+   plt.title(title)
+   plt.xlabel(x_lab)
+   plt.ylabel(y_lab)
+   plt.xticks(index + bar_width, x_ticks)
+   plt.legend()
+   plt.tight_layout()
+   plt.savefig(title + ".pdf")
+
+def run_tests():
+   num_tests = 9                                                           
+   results = run_scaled_tests(num_tests)                                   
+   full_cpu_av = np.array([av[2] for (av,r,i) in results])                 
+   mix_cpu_av = np.array([av[0] for (av,r,i) in results])              
+   io_av = np.array([av[1] for (av,r,i) in results])
+   num_io = np.array([i for (av,r,i) in results])      
+   x_ticks = np.array([str(x) + "(" +str(io)+")" for x,io in zip(np.arange(10,100,10),num_io)])
+   x_lab = "percentage io and (number of I/O processes used)"
+   y_lab = "average cpu time (value of i)"
+   title = "CPU average time for processes"
+   bar_plot(title,mix_cpu_av,full_cpu_av,io_av,num_tests,x_lab,x_ticks,y_lab)                                                                        
+
+
+
+# plt.figure()                                                            
+# plt.set_title("CPU Processes Average Time")                             
+# plt.ylabel("average cpu time");                                         
+# plt.xlabel("IO percentage run concurrently with CPU")                   
+# plt.plot(xs,ys)                                                         
+# plt.savefig("cpu_averages.pdf")                                         
+
+
